@@ -32,7 +32,7 @@ function Memory() {
 
     return (
         <div className="card-container p-6 rounded-lg shadow-lg bg-white text-center">
-            <h1 className='font-bold text-2xl mb-4'>Memory Utilization</h1>
+            <h1 className='font-bold text-2xl mb-4'>RAM Utilization</h1>
             {error && <p className="text-red-500">Error: {error}</p>}
             {memoryUtilization !== null ? (
                 <p className="text-4xl">{memoryUtilization !== undefined ? memoryUtilization + ' MB' : 'N/A'}</p>

@@ -35,38 +35,34 @@ function NetworkStats() {
             <h1 className='font-bold text-2xl mb-4'>Network Statistics</h1>
             {error && <p className="text-red-500">Error: {error}</p>}
             {stats && (
-                <ul>
-                    {Object.keys(stats).map(ifaceName => {
-    // Check if the current key is not memoryUtilization or cpuUtilization
-    if (ifaceName !== 'memoryUtilization' && ifaceName !== 'cpuUtilization') {
-        return (
-            <li key={ifaceName} className="mb-4">
-                <strong>IP Address:</strong> {stats[ifaceName].address}<br />
-                <strong>MAC:</strong> {stats[ifaceName].mac}<br />
-                <table className="table-auto">
+                <table className="table-auto w-full">
                     <thead>
                         <tr>
                             <th className="px-4 py-2">Interface Name</th>
                             <th className="px-4 py-2">Bytes Sent</th>
                             <th className="px-4 py-2">Bytes Received</th>
                             <th className="px-4 py-2">Total Bytes</th>
+                            <th className="px-4 py-2">Date and Time</th>
                         </tr>
                     </thead>
                     <tbody>
-                        <tr key={ifaceName}>
-                            <td className="border px-4 py-2">{ifaceName}</td>
-                            <td className="border px-4 py-2">{stats[ifaceName].bytesSent}</td>
-                            <td className="border px-4 py-2">{stats[ifaceName].bytesReceived}</td>
-                            <td className="border px-4 py-2">{stats[ifaceName].bytesTotal}</td>
-                        </tr>
+                        {Object.keys(stats).map(ifaceName => {
+                            // Check if the current key is not memoryUtilization, cpuUtilization, timestamp, or _id
+                            if (ifaceName !== 'memoryUtilization' && ifaceName !== 'cpuUtilization' && ifaceName !== 'timestamp' && ifaceName !== '_id') {
+                                return (
+                                    <tr key={ifaceName} className="mb-4">
+                                        <td className="border px-4 py-2">{ifaceName}</td>
+                                        <td className="border px-4 py-2">{stats[ifaceName].bytesSent}</td>
+                                        <td className="border px-4 py-2">{stats[ifaceName].bytesReceived}</td>
+                                        <td className="border px-4 py-2">{stats[ifaceName].bytesTotal}</td>
+                                        <td className="border px-4 py-2">{stats.timestamp}</td>
+                                    </tr>
+                                );
+                            }
+                            return null; // Skip rendering if it's memoryUtilization, cpuUtilization, timestamp, or _id
+                        })}
                     </tbody>
                 </table>
-            </li>
-        );
-    }
-    return null; // Skip rendering if it's memoryUtilization or cpuUtilization
-})}
-                </ul>
             )}
         </div>
     );

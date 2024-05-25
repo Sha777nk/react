@@ -3,6 +3,7 @@ const os = require('os');
 const WebSocket = require('ws');
 const pidusage = require('pidusage');
 const si = require('systeminformation');
+const { connectDB, getDB } = require('./db');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -77,7 +78,11 @@ async function getNetworkStats() {
     // Retrieve MAC and IP addresses
     const macAndIPAddresses = await getMACAndIPAddresses();
 
-    const stats = {};
+    const stats = {
+        timestamp: new Date().toISOString(),
+        memoryUtilization: memoryUtilization.toFixed(2),
+        cpuUtilization: cpuUtilization.toFixed(2),
+    };
 
     // Iterate over network interfaces and calculate statistics
     networkStats.forEach(iface => {
@@ -112,22 +117,32 @@ async function getNetworkStats() {
             console.warn(`No MAC and IP address information found for interface: ${ifaceName}`);
         }
     });
-    
-
-    stats.memoryUtilization = memoryUtilization.toFixed(2);
-    stats.cpuUtilization = cpuUtilization.toFixed(2);
 
     statsHistory.push(stats);
-    if (statsHistory.length > 10) {
+    if (statsHistory.length > 100) {
         statsHistory.shift();
     }
+
+    await storeStatsInDB(stats); // Store stats in MongoDB
 
     return stats;
 }
 
+// Function to store network statistics in MongoDB
+async function storeStatsInDB(stats) {
+    try {
+        const db = getDB();
+        const collection = db.collection('networkStats');
+        await collection.insertOne(stats);
+        
+    } catch (error) {
+        console.error('Error saving network stats to MongoDB:', error);
+    }
+}
 
 // Start the Express server
-const server = app.listen(PORT, () => {
+const server = app.listen(PORT, async () => {
+    await connectDB(); // Connect to MongoDB before starting the server
     console.log(`Server is running on http://localhost:${PORT}/`);
 });
 
