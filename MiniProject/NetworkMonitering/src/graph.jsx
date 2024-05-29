@@ -16,15 +16,15 @@ export default function LinePlot({
   const gy = useRef();
 
   const x = d3.scaleLinear().range([marginLeft, width - marginRight]).domain([0, 9]); // Set the domain from 0 to 9 for 10 data points
-  const y = d3.scaleLinear().nice().range([height - marginBottom, marginTop]).domain([0, 3]); // Set the domain from 0 to 5 with class interval of 0.1
+  const y = d3.scaleLinear().nice().range([height - marginBottom, marginTop]).domain([0, 100000]); // Set the domain from 0 to 5 with class interval of 0.1
 
   const lineBytesSent = d3.line()
     .x((_, i) => x(i))
-    .y((d) => y(d.bytesSent)); // Define the line function for bytes sent
+    .y((d) => y(d.tx_sec)); // Define the line function for bytes sent
 
   const lineBytesReceived = d3.line()
     .x((_, i) => x(i))
-    .y((d) => y(d.bytesReceived)); // Define the line function for bytes received
+    .y((d) => y(d.rx_sec)); // Define the line function for bytes received
 
   useEffect(() => {
     // Fetch data initially
@@ -40,20 +40,17 @@ export default function LinePlot({
   const fetchData = () => {
     axios.get("http://localhost:3000/history")
       .then(response => {
-        const rawData = response.data; // Extract the data from the response
-        const formattedData = rawData.map(item => ({
-          bytesSent: parseInt(item["Wi-Fi"].bytesSent),
-          bytesReceived: parseInt(item["Wi-Fi"].bytesReceived)
-        }));
-        setPlotData(formattedData.flat().slice(-10)); // Update plotData with the last 10 data points
+        const rawData = response.data;
+        const formattedData = Object.values(rawData).flatMap(network => network.stats);
+        setPlotData(formattedData.slice(-10)); // Update plotData with the last 10 data points
       })
       .catch(error => {
         console.error("Error fetching data:", error);
       });
   };
-
+  
   useEffect(() => void d3.select(gx.current).call(d3.axisBottom(x)), [gx, x]);
-  useEffect(() => void d3.select(gy.current).call(d3.axisLeft(y).tickValues(d3.range(0, 5.1, 0.1))), [gy, y]); // Update tick values to range from 0 to 5 with a step of 0.1
+  useEffect(() => void d3.select(gy.current).call(d3.axisLeft(y).tickValues(d3.range(0, 1000000, 10000))), [gy, y]); // Update tick values to range from 0 to 5 with a step of 0.1
 
   useEffect(() => {
     // Update the domain of the scales when plotData changes
@@ -71,19 +68,19 @@ export default function LinePlot({
         <path fill="none" stroke="yellow" strokeWidth="1.5" d={lineBytesReceived(plotData)} />
         {/* Indicator for bytes sent */}
         <rect x={width - marginRight - 50} y={10} width={10} height={10} fill="blue" />
-        <text x={width - marginRight - 35} y={20} fontSize="10" fill="black">Bytes Sent</text>
+        <text x={width - marginRight - 35} y={20} fontSize="10" fill="black">Incoming Bytes/sec</text>
         {/* Indicator for bytes received */}
         <rect x={width - marginRight - 50} y={25} width={10} height={10} fill="yellow" />
-        <text x={width - marginRight - 35} y={35} fontSize="10" fill="black">Bytes Received</text>
+        <text x={width - marginRight - 35} y={35} fontSize="10" fill="black">Outgoing Bytes/sec</text>
         {/* Circles for plotData */}
         <g fill="blue" stroke="currentColor" strokeWidth="1.5">
           {plotData.map((d, i) => (
-            <circle key={i} cx={x(i)} cy={y(d.bytesSent)} r="2.5" />
+            <circle key={i} cx={x(i)} cy={y(d.tx_sec)} r="2.5" />
           ))}
         </g>
         <g fill="yellow" stroke="currentColor" strokeWidth="1.5">
           {plotData.map((d, i) => (
-            <circle key={i} cx={x(i)} cy={y(d.bytesReceived)} r="2.5" />
+            <circle key={i} cx={x(i)} cy={y(d.rx_sec)} r="2.5" />
           ))}
         </g>
       </svg>

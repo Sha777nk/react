@@ -1,18 +1,99 @@
+// import React, { useState, useEffect } from 'react';
+
+// function NetworkStats() {
+//     const [stats, setStats] = useState(null);
+//     const [error, setError] = useState(null);
+
+//     useEffect(() => {
+//         const fetchData = async () => {
+//             try {
+//                 const response = await fetch('http://localhost:3000/');
+//                 if (!response.ok) {
+//                     throw new Error('Failed to fetch network statistics');
+//                 }
+//                 const data = await response.json();
+//                 setStats(data);
+//                 setError(null);
+//             } catch (error) {
+//                 setError(error.message);
+//                 setStats(null);
+//             }
+//         };
+
+//         // Fetch data initially
+//         fetchData();
+
+//         // Fetch data every second
+//         const interval = setInterval(fetchData, 1000);
+
+//         // Cleanup function to clear interval when component unmounts
+//         return () => clearInterval(interval);
+//     }, []); // Empty dependency array ensures this effect runs only once on component mount
+
+//     return (
+//         <div className="card-container p-6 rounded-lg shadow-lg bg-white">
+//             <h1 className='font-bold text-2xl mb-4'>Network Statistics</h1>
+//             {error && <p className="text-red-500">Error: {error}</p>}
+//             {stats && (
+//                 <table className="table-auto w-full">
+//                     <thead>
+//                         <tr>
+//                             <th className="px-4 py-2">Interface Name</th>
+//                             <th className="px-4 py-2">Bytes Sent</th>
+//                             <th className="px-4 py-2">Bytes Received</th>
+//                             <th className="px-4 py-2">Total Bytes</th>
+//                             <th className="px-4 py-2">Date and Time</th>
+//                         </tr>
+//                     </thead>
+//                     <tbody>
+//                         {Object.keys(stats).map(ifaceName => {
+//                             // Check if the current key is not memoryUtilization, cpuUtilization, timestamp, or _id
+//                             if (ifaceName !== 'memoryUtilization' && ifaceName !== 'cpuUtilization' && ifaceName !== 'timestamp' && ifaceName !== '_id') {
+//                                 return (
+//                                     <tr key={ifaceName} className="mb-4">
+//                                         <td className="border px-4 py-2">{ifaceName}</td>
+//                                         <td className="border px-4 py-2">{stats[ifaceName].bytesSent}</td>
+//                                         <td className="border px-4 py-2">{stats[ifaceName].bytesReceived}</td>
+//                                         <td className="border px-4 py-2">{stats[ifaceName].bytesTotal}</td>
+//                                         <td className="border px-4 py-2">{stats.timestamp}</td>
+//                                     </tr>
+//                                 );
+//                             }
+//                             return null; // Skip rendering if it's memoryUtilization, cpuUtilization, timestamp, or _id
+//                         })}
+//                     </tbody>
+//                 </table>
+//             )}
+//         </div>
+//     );
+// }
+
+// export default NetworkStats;
+
+
+
+
+
+
+
+
+
 const express = require('express');
 const os = require('os');
 const WebSocket = require('ws');
 const pidusage = require('pidusage');
 const si = require('systeminformation');
+const bodyParser = require('body-parser');
 const { connectDB, getDB } = require('./db');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-let lastReceived = 0;
-let lastSent = 0;
-let lastTotal = 0;
 
-let statsHistory = [];
+app.use(bodyParser.json());
 
+let networkData = {}; // In-memory store for network data
+
+// Middleware for CORS
 app.use((req, res, next) => {
     res.setHeader("Access-Control-Allow-Origin", "http://localhost:5173");
     res.setHeader("Access-Control-Allow-Methods", "OPTIONS, GET, POST, PUT, PATCH, DELETE");
@@ -31,6 +112,23 @@ wss.on('connection', function connection(ws) {
     ws.send('WebSocket connected');
 });
 
+// Add a new route to handle adding new networks
+app.post('/add-network', async (req, res) => {
+    const { networkName, ip, mac } = req.body;
+    if (!networkName || !ip || !mac) {
+        return res.status(400).send('Missing required fields');
+    }
+
+    // Add network details to the in-memory object or a database
+    networkData[networkName] = { ip, mac, stats: [] }; // Assuming networkData is an object to store network details
+    res.status(201).send('Network added successfully');
+});
+
+// Fetch the list of all networks
+app.get('/networks', (req, res) => {
+    res.json(Object.keys(networkData));
+});
+
 // Define getProcessStats function
 async function getProcessStats() {
     return new Promise((resolve, reject) => {
@@ -42,41 +140,11 @@ async function getProcessStats() {
 }
 
 // Function to retrieve network stats
+// Function to retrieve network stats
 async function getNetworkStats() {
-    // Retrieve memory and CPU utilization
     const pidStats = await getProcessStats();
     const memoryUtilization = pidStats.memory / (1024 * 1024); // Convert memory to MB
     const cpuUtilization = pidStats.cpu;
-
-    // Retrieve network statistics using systeminformation
-    let networkStats;
-    try {
-        networkStats = await si.networkStats();
-    } catch (error) {
-        console.error('Error retrieving network stats:', error);
-        return { error: 'Internal server error' };
-    }
-
-    // Function to retrieve MAC and IP addresses
-    async function getMACAndIPAddresses() {
-        const interfaces = os.networkInterfaces();
-        const macAndIPAddresses = {};
-
-        Object.keys(interfaces).forEach(ifaceName => {
-            const iface = interfaces[ifaceName];
-            const ipv4Interfaces = iface.filter(iface => iface.family === 'IPv4' && !iface.internal);
-            if (ipv4Interfaces.length > 0) {
-                const ifaceStats = ipv4Interfaces[0];
-                const { address, mac } = ifaceStats;
-                macAndIPAddresses[ifaceName] = { address, mac };
-            }
-        });
-
-        return macAndIPAddresses;
-    }
-
-    // Retrieve MAC and IP addresses
-    const macAndIPAddresses = await getMACAndIPAddresses();
 
     const stats = {
         timestamp: new Date().toISOString(),
@@ -84,60 +152,19 @@ async function getNetworkStats() {
         cpuUtilization: cpuUtilization.toFixed(2),
     };
 
-    // Iterate over network interfaces and calculate statistics
-    networkStats.forEach(iface => {
-        const ifaceName = iface.iface;
-        const macAndIP = macAndIPAddresses[ifaceName];
-        if (macAndIP) { // Check if the MAC and IP information exists
-            const { address, mac } = macAndIP;
-            const bytesReceived = iface.rx_bytes;
-            const bytesSent = iface.tx_bytes;
-            const bytesTotal = bytesReceived + bytesSent;
-    
-            const newReceived = bytesReceived - lastReceived;
-            const newSent = bytesSent - lastSent;
-            const newTotal = bytesTotal - lastTotal;
-    
-            const mbNewReceived = newReceived / 1024 / 1024;
-            const mbNewSent = newSent / 1024 / 1024;
-            const mbNewTotal = newTotal / 1024 / 1024;
-    
-            stats[ifaceName] = {
-                address: address,
-                mac: mac,
-                bytesReceived: mbNewReceived.toFixed(2),
-                bytesSent: mbNewSent.toFixed(2),
-                bytesTotal: mbNewTotal.toFixed(2)
-            };
-    
-            lastReceived = bytesReceived;
-            lastSent = bytesSent;
-            lastTotal = bytesTotal;
-        } else {
-            console.warn(`No MAC and IP address information found for interface: ${ifaceName}`);
-        }
-    });
-
-    statsHistory.push(stats);
-    if (statsHistory.length > 100) {
-        statsHistory.shift();
+    for (const networkName in networkData) {
+        const { ip, mac } = networkData[networkName];
+        const networkStats = await si.networkStats(ip);
+        stats[networkName] = {
+            ip,
+            mac,
+            ...networkStats[0],
+        };
+        networkData[networkName].stats.push(stats[networkName]);
     }
-
-    await storeStatsInDB(stats); // Store stats in MongoDB
 
     return stats;
-}
 
-// Function to store network statistics in MongoDB
-async function storeStatsInDB(stats) {
-    try {
-        const db = getDB();
-        const collection = db.collection('networkStats');
-        await collection.insertOne(stats);
-        
-    } catch (error) {
-        console.error('Error saving network stats to MongoDB:', error);
-    }
 }
 
 // Start the Express server
@@ -154,11 +181,23 @@ server.on('upgrade', (request, socket, head) => {
 });
 
 // Routes
+
+// Fetch stats for a specific network
+app.get('/network/:networkId', async (req, res) => {
+    const networkId = req.params.networkId;
+    if (!networkData[networkId]) {
+        return res.status(404).send('Network not found');
+    }
+    
+    const stats = await getNetworkStats();
+    res.json({ [networkId]: stats[networkId] });
+});
+
 app.get('/', async (req, res) => {
     const stats = await getNetworkStats();
     res.json(stats);
 });
 
 app.get('/history', (req, res) => {
-    res.json(statsHistory);
+    res.json(networkData);
 });

@@ -1,70 +1,154 @@
-import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
+// import React, { useState, useEffect } from 'react';
+// import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
+// import NetworkStats from './NetworkStats';
+// import Cpu from './Cpu';
+// import Memory from './Memory';
+// import LinePlot from './graph';
+// import AddNetwork from './AddNetwork';
+
+// function Navbar() {
+//     const [networks, setNetworks] = useState([]);
+//     const [selectedNetwork, setSelectedNetwork] = useState(null);
+
+//     const fetchNetworks = async () => {
+//         try {
+//             const response = await fetch('http://localhost:3000/networks');
+//             const data = await response.json();
+//             setNetworks(data);
+//             if (data.length > 0) {
+//                 setSelectedNetwork(data[0]);
+//             }
+//         } catch (error) {
+//             console.error('Error fetching networks:', error);
+//         }
+//     };
+
+//     useEffect(() => {
+//         fetchNetworks();
+//     }, []);
+
+//     return (
+//         <Router>
+//             <div className="bg-gray-800 text-white p-4">
+//                 <div className="max-w-6xl mx-auto flex justify-between items-center">
+//                     <h1 className="text-2xl font-bold">Network Monitoring System</h1>
+//                     <nav>
+//                         <ul className="flex space-x-4">
+//                             {networks.map(network => (
+//                                 <li key={network}>
+//                                     <Link to={`/${network}`} onClick={() => setSelectedNetwork(network)}>
+//                                         {network}
+//                                     </Link>
+//                                 </li>
+//                             ))}
+//                             <li>
+//                                 <Link to="/add-network">Add Network</Link>
+//                             </li>
+//                         </ul>
+//                     </nav>
+//                 </div>
+//             </div>
+
+//             <div className="max-w-6xl mx-auto px-4 py-8">
+//                 <Routes>
+//                     <Route path="/" element={
+//                         <div>
+//                             {selectedNetwork && <NetworkStats networkId={selectedNetwork} />}
+//                             <div className="mt-8">
+//                                 <LinePlot />
+//                                 <br />
+//                                 <NetworkStats/>
+//                             </div>
+//                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-8">
+//                                 <Cpu />
+//                                 <Memory />
+//                             </div>
+//                         </div>
+//                     } />
+//                     {networks.map(network => (
+//                         <Route key={network} path={`/${network}`} element={<NetworkStats networkId={network} />} />
+//                     ))}
+//                     <Route path="/add-network" element={<AddNetwork onNetworkAdded={fetchNetworks} />} />
+//                 </Routes>
+//             </div>
+//         </Router>
+//     );
+// }
+
+// export default Navbar;
+
+
+
+
+
+
+import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import NetworkStats from './NetworkStats';
 import Cpu from './Cpu';
 import Memory from './Memory';
 import LinePlot from './graph';
-
-function Card({ title, children }) {
-  return (
-    <div className="bg-white rounded-lg shadow-md p-4 mb-4">
-      <h2 className="text-lg font-semibold mb-2">{title}</h2>
-      {children}
-    </div>
-  );
-}
+import AddNetwork from './AddNetwork';
 
 function Navbar() {
-  return (
-    <Router>
-      <div className="bg-gray-800 text-white p-4">
-        <div className="max-w-6xl mx-auto flex justify-between items-center">
-          <h1 className="text-2xl font-bold">Network Monitoring System</h1>
-          <nav>
-            <ul className="flex space-x-4">
-              <li><Link to="/">Home </Link></li>
-              <li><Link to="/network-stats">Network Stats</Link></li>
-              <li><Link to="/cpu-memory">Load Balancer</Link></li>
-              <li><Link to="/graph">Graph</Link></li>
-            </ul>
-          </nav>
+    const [networks, setNetworks] = useState([]);
+    const [selectedNetwork, setSelectedNetwork] = useState(null);
+
+    const fetchNetworks = async () => {
+        try {
+            const response = await fetch('http://localhost:3000/networks');
+            const data = await response.json();
+            setNetworks(data);
+            if (data.length > 0) {
+                setSelectedNetwork(data[0]);
+            }
+        } catch (error) {
+            console.error('Error fetching networks:', error);
+        }
+    };
+
+    useEffect(() => {
+        fetchNetworks();
+    }, []);
+
+    return (
+        <div className="bg-gray-800 text-white p-4">
+            <div className="max-w-6xl mx-auto flex justify-between items-center">
+                <h1 className="text-2xl font-bold">Network Monitoring System</h1>
+                <nav>
+                    <ul className="flex space-x-4">
+                        <li>
+                            <Link to="/">Home</Link>
+                        </li>
+                        <li>
+                            <Link to="/NetworkStats">NetworkStats</Link>
+                        </li>
+                        <li>
+                            <Link to="/graph">Graph</Link>
+                        </li>
+                        <li>
+                            <Link to="/LoadBalancer">LoadBalancer</Link>
+                        </li>
+                       
+                        {networks.map(network => (
+                            <li key={network}>
+                                <Link to={`/${network}`} onClick={() => setSelectedNetwork(network)}>
+                                    {network}
+                                </Link>
+                            </li>
+                        ))}
+                        <li>
+                            <Link to="/add-network">Add Network</Link>
+                        </li>
+                    </ul>
+                </nav>
+            </div>
         </div>
-      </div>
-      
-      <div className="max-w-6xl mx-auto px-4 py-8">
-        <Routes>
-          <Route path="/" element={
-            <div>
-              <div className="mb-8">
-                <LinePlot />
-              </div>
-              <NetworkStats />
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-8">
-                <div>
-                  <Cpu />
-                </div>
-                <div>
-                  <Memory />
-                </div>
-              </div>
-            </div>
-          } />
-          <Route path="/network-stats" element={<NetworkStats />} />
-          <Route path="/cpu-memory" element={
-            <div className="max-w-6xl mx-auto grid grid-cols-2 gap-4">
-              <Card title="CPU">
-                <Cpu />
-              </Card>
-              <Card title="Memory">
-                <Memory />
-              </Card>
-            </div>
-          } />
-          <Route path="/graph" element={<LinePlot />} />
-        </Routes>
-      </div>
-    </Router>
-  );
+    );
 }
 
 export default Navbar;
+
+
+
+
