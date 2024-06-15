@@ -157,7 +157,15 @@ function NetworkStats() {
                 }
                 const data = await response.json();
                 if (isSubscribed) {
-                    setStats(data);
+                    // Filter out memoryInfo and cpuInfo
+                    const filteredData = Object.keys(data)
+                        .filter(key => key !== 'memoryInfo' && key !== 'cpuInfo')
+                        .reduce((obj, key) => {
+                            obj[key] = data[key];
+                            return obj;
+                        }, {});
+                    
+                    setStats(filteredData);
                     setError(null);
                 }
             } catch (error) {
@@ -199,7 +207,6 @@ function NetworkStats() {
                                 <td className="px-4 py-2">Timestamp</td>
                                 <td className="px-4 py-2">{stats.timestamp}</td>
                             </tr>
-                        
                         </tbody>
                     </table>
                 </div>
@@ -283,7 +290,7 @@ function NetworkStats() {
             {error && <p className="text-red-500">Error: {error}</p>}
             {stats ? (
                 Object.keys(stats).map((networkName) => (
-                    networkName !== 'timestamp' && networkName !== 'memoryUtilization' && networkName !== 'cpuUtilization' && (
+                    networkName !== 'timestamp' && (
                         <div key={networkName}>
                             <h2 className="font-bold text-xl mb-4">{networkName}</h2>
                             {renderNetworkStats(stats[networkName])}
@@ -298,4 +305,5 @@ function NetworkStats() {
 }
 
 export default NetworkStats;
+
 

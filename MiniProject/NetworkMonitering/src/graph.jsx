@@ -8,7 +8,7 @@ export default function LinePlot({
   marginTop = 20,
   marginRight = 20,
   marginBottom = 30,
-  marginLeft = 40,
+  marginLeft = 50,
 }) {
   const [plotData, setPlotData] = useState([]); // Initialize plotData with an empty array
 
