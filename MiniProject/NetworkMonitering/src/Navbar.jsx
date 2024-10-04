@@ -81,18 +81,15 @@
 
 
 
-
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import NetworkStats from './NetworkStats';
-import Cpu from './Cpu';
-import Memory from './Memory';
-import LinePlot from './graph';
 import AddNetwork from './AddNetwork';
+import { UserButton } from '@clerk/clerk-react';
 
 function Navbar() {
     const [networks, setNetworks] = useState([]);
     const [selectedNetwork, setSelectedNetwork] = useState(null);
+    const [showNetworksDropdown, setShowNetworksDropdown] = useState(false);
 
     const fetchNetworks = async () => {
         try {
@@ -107,9 +104,40 @@ function Navbar() {
         }
     };
 
+    const fetchNetworkStats = async (networkId) => {
+        try {
+            const response = await fetch(`http://localhost:3000/network/${networkId}`);
+            const data = await response.json();
+            console.log(`Stats for ${networkId}:`, data);
+        } catch (error) {
+            console.error(`Error fetching stats for network ${networkId}:`, error);
+        }
+    };
+
+    const removeNetwork = async (networkId) => {
+        try {
+            await fetch(`http://localhost:3000/network/${networkId}`, {
+                method: 'DELETE',
+            });
+            fetchNetworks(); // Refresh the network list
+        } catch (error) {
+            console.error(`Error removing network ${networkId}:`, error);
+        }
+    };
+
     useEffect(() => {
         fetchNetworks();
     }, []);
+
+    const handleNetworkSelect = (network) => {
+        setSelectedNetwork(network);
+        fetchNetworkStats(network);
+        setShowNetworksDropdown(false); // Close dropdown after selection
+    };
+
+    const handleRemoveNetwork = (networkId) => {
+        removeNetwork(networkId);
+    };
 
     return (
         <div className="bg-gray-800 text-white p-4">
@@ -129,26 +157,50 @@ function Navbar() {
                         <li>
                             <Link to="/LoadBalancer">LoadBalancer</Link>
                         </li>
-                       
-                        {networks.map(network => (
-                            <li key={network}>
-                                <Link to={`/${network}`} onClick={() => setSelectedNetwork(network)}>
-                                    {network}
-                                </Link>
-                            </li>
-                        ))}
+                        <li className="dropdown">
+                            <button className="dropbtn" onClick={() => setShowNetworksDropdown(!showNetworksDropdown)}>
+                                Networks
+                            </button>
+                            {showNetworksDropdown && (
+                                <div className="dropdown-content">
+                                    {networks.map(network => (
+                                        <div key={network}>
+                                            <Link
+                                                to={`/Networksadded`}
+                                                onClick={() => handleNetworkSelect(network)}
+                                                className={selectedNetwork === network ? 'active' : ''}
+                                            >
+                                                {network}
+                                            </Link>
+                                            <button
+                                                onClick={() => handleRemoveNetwork(network)}
+                                                    className="bg-white text-black ml-2 px-2  rounded-md"
+                                            >
+                                                Remove
+                                            </button>
+
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </li>
                         <li>
                             <Link to="/add-network">Add Network</Link>
+                        </li>
+                        <li>
+                            <UserButton />
                         </li>
                     </ul>
                 </nav>
             </div>
+            {selectedNetwork && (
+                <div className="network-stats mt-4">
+                    <h2>{selectedNetwork} Stats</h2>
+                    {/* Display network stats or other content here */}
+                </div>
+            )}
         </div>
     );
 }
 
 export default Navbar;
-
-
-
-

@@ -145,9 +145,25 @@ import React, { useState, useEffect } from 'react';
 function NetworkStats() {
     const [stats, setStats] = useState(null);
     const [error, setError] = useState(null);
+    const [networks, setNetworks] = useState([]); // State to hold user-specific networks
+
+    // Function to fetch networks for the logged-in user
+    async function fetchNetworks() {
+        const token = localStorage.getItem('token'); // Assuming you store the JWT in localStorage
+        const response = await fetch('http://localhost:3000/networks/', {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        const networks = await response.json();
+        setNetworks(networks);
+    }
 
     useEffect(() => {
         let isSubscribed = true;
+
+        // Fetch networks when component mounts
+        fetchNetworks();
 
         const fetchData = async () => {
             try {
@@ -288,9 +304,9 @@ function NetworkStats() {
         <div className="card-container p-6 rounded-lg shadow-lg bg-white">
             <h1 className="font-bold text-2xl mb-4">Network Statistics</h1>
             {error && <p className="text-red-500">Error: {error}</p>}
-            {stats ? (
-                Object.keys(stats).map((networkName) => (
-                    networkName !== 'timestamp' && (
+            {networks.length > 0 ? (
+                networks.map((networkName) => (
+                    stats && stats[networkName] && (
                         <div key={networkName}>
                             <h2 className="font-bold text-xl mb-4">{networkName}</h2>
                             {renderNetworkStats(stats[networkName])}
@@ -298,12 +314,11 @@ function NetworkStats() {
                     )
                 ))
             ) : (
-                <p>Loading...</p>
+                <p>Loading networks...</p>
             )}
         </div>
     );
 }
 
 export default NetworkStats;
-
 

@@ -51,6 +51,7 @@ function AddNetwork({ onNetworkAdded }) {
             </div>
             <button type="submit" className="bg-blue-500 text-white p-2 rounded">Add Network</button>
         </form>
+        
     );
 }
 
